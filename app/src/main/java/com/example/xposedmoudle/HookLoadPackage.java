@@ -1,15 +1,12 @@
 package com.example.xposedmoudle;
 
-import android.graphics.Color;
 import android.os.Bundle;
-import android.util.Log;
 import android.widget.TextView;
 
 import java.lang.reflect.Field;
 
 import de.robv.android.xposed.IXposedHookLoadPackage;
 import de.robv.android.xposed.XC_MethodHook;
-import de.robv.android.xposed.XposedBridge;
 import de.robv.android.xposed.XposedHelpers;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
 
@@ -30,7 +27,6 @@ public class HookLoadPackage implements IXposedHookLoadPackage {
                             Class c = loadPackageParam.classLoader.loadClass("com.example.xposedmoudle.MainActivity");
                             Field fild = c.getDeclaredField("tv");
                             fild.setAccessible(true);
-                            XposedBridge.log("========================action-Test");
                             TextView tv = (TextView) fild.get(param.thisObject);
                             tv.setText("测试");
                         }

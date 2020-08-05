@@ -1,6 +1,5 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.example.xposedmoudle">
-
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
@@ -15,16 +14,16 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-
+        <!--是否作为模块-->
         <meta-data
             android:name="xposedmodule"
             android:value="true" />
         <meta-data
             android:name="xposeddescription"
-            android:value="hellow 11xposed" />
+            android:value="hellow xposed" />
+        <!--这个版本对应的是引入的jar版本-->
         <meta-data
             android:name="xposedminversion"
             android:value="53" />
     </application>
-
 </manifest>
