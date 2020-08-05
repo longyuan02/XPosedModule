@@ -18,8 +18,8 @@ Xposed是一个很厉害的框架,可以在不改动app的情况下对app进行�
 
 ## 创建一个工程
 + Step 1：新建一个工程，然后修改下AndroidManifest.xml，增加下面的代码：
-<pre><code>   
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+
+```<manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.example.xposedmoudle">
     <application
         android:allowBackup="true"
@@ -46,8 +46,7 @@ Xposed是一个很厉害的框架,可以在不改动app的情况下对app进行�
             android:name="xposedminversion"
             android:value="53" />
     </application>
-</manifest>
-</code></pre>
+</manifest>```
 
 + step2 引入依赖
 在build.gradle(app)中添加依赖
