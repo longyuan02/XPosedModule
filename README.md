@@ -92,7 +92,7 @@ dependencies {
 
 + step4 在app/src/main/asserts文件夹创建一个xposed_init文件将入口文件完整名写入,每一行执行一个入口 类
 ```
- com.example.xposedmoudle.HookLoadPackage
+ com.example.xposedmoudle.xprosed.HookLoadPackage
 ```
 继承了IXposedHookLoadPackage接口，重写了handleLoadPackage方法，
 判断app包名，如果是的，XposedHelpers.findAndHookMethod()，
@@ -100,6 +100,17 @@ hook掉onCreate()方法，XC_MethodHook()重写afterHookedMethod，
 当onCreate()执行后会回调这个方法，在这里获得TextView对象，
 把文字修改”，接着运行，安装后需要重启设备。
 
+### 问题汇总
+```
+Class ref in pre-verified class resolved to unexpected implementation
+报错场景：插件开发中，先在插件中引用某jar包后，将插件放入宿主运行，结果报此错；
+原因分析：宿主与插件引用了相同的jar包，造成重复引用。去掉后问题解决！
+```
+
+# part2
+### 拦截生命周期动作
+参考资料:https://bbs.pediy.com/thread-225639.htm
+工程实现类:MyInstrumetation
 
 
 

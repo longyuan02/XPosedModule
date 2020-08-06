@@ -1,4 +1,4 @@
-package com.example.xposedmoudle;
+package com.example.xposedmoudle.xprosed;
 
 import android.os.Bundle;
 import android.widget.TextView;
