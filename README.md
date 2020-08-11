@@ -105,12 +105,241 @@ hook掉onCreate()方法，XC_MethodHook()重写afterHookedMethod，
 Class ref in pre-verified class resolved to unexpected implementation
 报错场景：插件开发中，先在插件中引用某jar包后，将插件放入宿主运行，结果报此错；
 原因分析：宿主与插件引用了相同的jar包，造成重复引用。去掉后问题解决！
-```
 
 # part2
-### 拦截生命周期动作
-参考资料:https://bbs.pediy.com/thread-225639.htm
+## 核心类
+[官方文档链接]:https://api.xposed.info/reference/de/robv/android/xposed/XposedHelpers.html
+上一篇说到如何集成Xposed框架,接下来就是要实现相关功能,初步了解基本使用
+
++ 核心接口:
+    IXposedHookInitPackageResources-->应用加载完成初始化资源时调用
+    IXposedHookLoadPackage  -->加载应用时调用
+    IXposedHookZygoteInit  --> 系统启动是加载
+
+    XposedHelpers -->构造帮助类,辅助<IXposedHookLoadPackage>通过反射获得实体类,方法,属性并对其进行操作
+
++ demo场景:
+为方便测试,本文将操作页面集成在一个demo中包名:"com.example.xposedmoudle",目标对象"MainActivity"
+```
+public class HookLoadPackage implements IXposedHookLoadPackage {
+    @Override
+    public void handleLoadPackage(final XC_LoadPackage.LoadPackageParam loadPackageParam) throws Throwable {
+        if (loadPackageParam.packageName.equals("com.example.xposedmoudle")) {
+            XposedHelpers.findAndHookMethod("com.example.xposedmoudle.MainActivity", loadPackageParam.classLoader, "onCreate", Bundle.class,
+                    new XC_MethodHook() {
+                        @Override
+                        protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                            super.beforeHookedMethod(param);
+                        }
+
+                        @Override
+                        protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                            super.afterHookedMethod(param);
+                            //通过hook对象拿到目标对象实体
+                            Class c = loadPackageParam.classLoader.loadClass("com.example.xposedmoudle.MainActivity");
+                            //通过反射获取textview属性
+                            Field fild = c.getDeclaredField("tv");
+                            //允许访问私有属性
+                            fild.setAccessible(true);
+                            //得到私有属性textview
+                            TextView tv = (TextView) fild.get(param.thisObject);
+                            tv.setText("测试");
+                        }
+                    });
+        }
+    }
+}
+
+```
++ IXposedHookInitPackageResources
+```
+实现 IXposedHookInitPackageResources接口
+    @Override
+    public void handleInitPackageResources(XC_InitPackageResources.InitPackageResourcesParam resparam) throws Throwable {
+        /**
+         * 参数createInstance(String path, XResources origRes)
+         * path 路径:在那个apk中加载
+         * resparam:设置资源文件
+         */
+//        if(){}判断目标包名
+        XModuleResources modRes = XModuleResources.createInstance(MODULE_PATH, resparam.res);
+        resparam.res.addResource(modRes, R.drawable.ic_launcher_foreground);
+        resparam.res.addResource(modRes, R.drawable.ic_launcher_background);
+    }
+```
++ IXposedHookZygoteInit
+```
+@Override
+    public void initZygote(StartupParam startupParam) throws Throwable {
+        //获取加载apk
+        MODULE_PATH = startupParam.modulePath;
+    }
+```
+
+
++ 实现对activity生命周期的拦截
+通过源码追动可以找到ActivityThread 持有Instrumetation实力,他哦难过Instrumentation进行activity生命周期的调用,思路是自定义一个Instrumentation类,替换掉系统的持有.
+```
+public class MyInstrumetation extends Instrumentation {
+    private static final boolean DEBUG = false;
+    private static final String TAG = "MyInstrumentation";
+    private Instrumentation mInstrumentation;
+    private Context mContext;
+    public MyInstrumetation(Context context) {
+        this.mContext = context;
+        init();
+    }
+    private void init() {
+        try {
+            Class<?> activityThreadClass = null;
+            activityThreadClass = Class.forName("android.app.ActivityThread");
+            Method currentActivityThreadMethod = activityThreadClass.getMethod("currentActivityThread");
+            Object sCurrentActivityThrad = currentActivityThreadMethod.invoke(null);
+            //获得ActivityThread实例
+            Class<?> asClass = sCurrentActivityThrad.getClass();
+            Looper mLooper = (Looper) asClass.getMethod("getLooper").invoke(sCurrentActivityThrad);
+            Field mInstumentationField = asClass.getDeclaredField("mInstrumentation");
+            mInstumentationField.setAccessible(true);
+            mInstrumentation = (Instrumentation) mInstumentationField.get(sCurrentActivityThrad);
+            Class<? extends Instrumentation> mInstrumentationClass = mInstrumentation.getClass();
+            mInstumentationField.set(sCurrentActivityThrad, this);
+        } catch (Exception e) {
+            Log.e(TAG, "======" + e.getMessage().toString());
+        }
+    }
+    //重写注意super.callActivityOnPause(activity);不能删掉 可以理解为目标Activity的onPause方法
+    //按照代码块执行顺序执行-->限制性log 在执行Activity的onPause
+    @Override
+    public void callActivityOnPause(Activity activity) {
+        Log.e("======", "hook--->");
+        super.callActivityOnPause(activity);
+    }
+}
+
+```
+在使用的位置new 出对象,传入上下文
+框架还在进一步探索中,欢迎大家交流指正
+## 核心类
+[官方文档链接]:https://api.xposed.info/reference/de/robv/android/xposed/XposedHelpers.html
+上一篇说到如何集成Xposed框架,接下来就是要实现相关功能,初步了解基本使用
+
++ 核心接口:
+    IXposedHookInitPackageResources-->应用加载完成初始化资源时调用
+    IXposedHookLoadPackage  -->加载应用时调用
+    IXposedHookZygoteInit  --> 系统启动是加载
+
+    XposedHelpers -->构造帮助类,辅助<IXposedHookLoadPackage>通过反射获得实体类,方法,属性并对其进行操作
+
++ demo场景:
+为方便测试,本文将操作页面集成在一个demo中包名:"com.example.xposedmoudle",目标对象"MainActivity"
+```
+public class HookLoadPackage implements IXposedHookLoadPackage {
+    @Override
+    public void handleLoadPackage(final XC_LoadPackage.LoadPackageParam loadPackageParam) throws Throwable {
+        if (loadPackageParam.packageName.equals("com.example.xposedmoudle")) {
+            XposedHelpers.findAndHookMethod("com.example.xposedmoudle.MainActivity", loadPackageParam.classLoader, "onCreate", Bundle.class,
+                    new XC_MethodHook() {
+                        @Override
+                        protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                            super.beforeHookedMethod(param);
+                        }
+
+                        @Override
+                        protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                            super.afterHookedMethod(param);
+                            //通过hook对象拿到目标对象实体
+                            Class c = loadPackageParam.classLoader.loadClass("com.example.xposedmoudle.MainActivity");
+                            //通过反射获取textview属性
+                            Field fild = c.getDeclaredField("tv");
+                            //允许访问私有属性
+                            fild.setAccessible(true);
+                            //得到私有属性textview
+                            TextView tv = (TextView) fild.get(param.thisObject);
+                            tv.setText("测试");
+                        }
+                    });
+        }
+    }
+}
+
+```
++ IXposedHookInitPackageResources
+```
+实现 IXposedHookInitPackageResources接口
+    @Override
+    public void handleInitPackageResources(XC_InitPackageResources.InitPackageResourcesParam resparam) throws Throwable {
+        /**
+         * 参数createInstance(String path, XResources origRes)
+         * path 路径:在那个apk中加载
+         * resparam:设置资源文件
+         */
+//        if(){}判断目标包名
+        XModuleResources modRes = XModuleResources.createInstance(MODULE_PATH, resparam.res);
+        resparam.res.addResource(modRes, R.drawable.ic_launcher_foreground);
+        resparam.res.addResource(modRes, R.drawable.ic_launcher_background);
+    }
+```
++ IXposedHookZygoteInit
+```
+@Override
+    public void initZygote(StartupParam startupParam) throws Throwable {
+        //获取加载apk
+        MODULE_PATH = startupParam.modulePath;
+    }
+```
+
+
++ 实现对activity生命周期的拦截
+通过源码追动可以找到ActivityThread 持有Instrumetation实力,他哦难过Instrumentation进行activity生命周期的调用,思路是自定义一个Instrumentation类,替换掉系统的持有.
+```
+public class MyInstrumetation extends Instrumentation {
+    private static final boolean DEBUG = false;
+    private static final String TAG = "MyInstrumentation";
+    private Instrumentation mInstrumentation;
+    private Context mContext;
+    public MyInstrumetation(Context context) {
+        this.mContext = context;
+        init();
+    }
+    private void init() {
+        try {
+            Class<?> activityThreadClass = null;
+            activityThreadClass = Class.forName("android.app.ActivityThread");
+            Method currentActivityThreadMethod = activityThreadClass.getMethod("currentActivityThread");
+            Object sCurrentActivityThrad = currentActivityThreadMethod.invoke(null);
+            //获得ActivityThread实例
+            Class<?> asClass = sCurrentActivityThrad.getClass();
+            Looper mLooper = (Looper) asClass.getMethod("getLooper").invoke(sCurrentActivityThrad);
+            Field mInstumentationField = asClass.getDeclaredField("mInstrumentation");
+            mInstumentationField.setAccessible(true);
+            mInstrumentation = (Instrumentation) mInstumentationField.get(sCurrentActivityThrad);
+            Class<? extends Instrumentation> mInstrumentationClass = mInstrumentation.getClass();
+            mInstumentationField.set(sCurrentActivityThrad, this);
+        } catch (Exception e) {
+            Log.e(TAG, "======" + e.getMessage().toString());
+        }
+    }
+    //重写注意super.callActivityOnPause(activity);不能删掉 可以理解为目标Activity的onPause方法
+    //按照代码块执行顺序执行-->限制性log 在执行Activity的onPause
+    @Override
+    public void callActivityOnPause(Activity activity) {
+        Log.e("======", "hook--->");
+        super.callActivityOnPause(activity);
+    }
+}
+
+```
 工程实现类:MyInstrumetation
+
+在使用的位置new 出对象,传入上下文
+框架还在进一步探索中,欢迎大家交流指正
+
+
+
+
+## 三星S9手机root
+密码：1qaZ2wsX
+[samsung](https://www.114shouji.com/show-17650-1-1.html):https://www.114shouji.com/show-17650-1-1.html
 
 
 
