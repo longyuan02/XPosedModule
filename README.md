@@ -337,9 +337,9 @@ public class MyInstrumetation extends Instrumentation {
 
 
 
-## 三星S9手机root
-密码：1qaZ2wsX
-[samsung](https://www.114shouji.com/show-17650-1-1.html):https://www.114shouji.com/show-17650-1-1.html
+## 三星S9手机root    
+密码：1qaZ2wsX   
+[samsung](https://www.114shouji.com/show-17650-1-1.html):https://www.114shouji.com/show-17650-1-1.html   
 
 
 
