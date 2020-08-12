@@ -345,3 +345,4 @@ public class MyInstrumetation extends Instrumentation {
 
 [资料](https://blog.csdn.net/coder_pig/article/details/8003128工程5#t2)
 [地址](https://github.com/longyuan02/XPosedModule.git)
+[三星]http://www.romleyuan.com/lec/read?id=153
